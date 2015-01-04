@@ -1,0 +1,235 @@
+#!/usr/bin/env ruby
+VERSION = "0.0.1"
+CHECK_IN_MESSAGE = ">>> CHECKED IN - "
+CHECK_OUT_MESSAGE = "<<< CHECKED OUT - "
+
+class String
+  # colorization
+  def colorize(color_code)
+    "\e[#{color_code}m#{self}\e[0m"
+  end
+
+  def red
+    colorize(31)
+  end
+
+  def green
+    colorize(32)
+  end
+
+  def yellow
+    colorize(33)
+  end
+
+  def pink
+    colorize(35)
+  end
+end
+
+
+module Checker
+
+  FILE_NAME = Time.now.strftime("%d-%m-%Y")
+
+  def self.generate
+
+    unless File.exists?(FILE_NAME)
+      File.open(FILE_NAME, "w+") do |f|
+        f.write(Time.now.inspect + "\n")
+      end
+    end
+  end
+
+  def self.add_check_in(user)
+    File.open(FILE_NAME, "a+") do |f|
+      f.write(CHECK_IN_MESSAGE+ "'#{user.name}' AT: " +  "\t" + Time.now.strftime("%H:%M:%S") )
+      f.write("\n")
+    end
+  end
+
+  def self.add_check_out(user)
+    File.open(FILE_NAME, "a+") do |f|
+      f.write(CHECK_OUT_MESSAGE+ "'#{user.name}' AT: " +  "\t" + Time.now.strftime("%H:%M:%S") )
+      f.write("\n")
+    end
+  end
+
+  def self.get_log(date = FILE_NAME)
+
+    unless File.exists?(date)
+      puts "No hay registros en esa fecha, desplegando registro actual"
+      date = FILE_NAME
+    end
+
+    File.open(date, "r") do |f|
+      f.each_line do |line|
+        if line.start_with?(CHECK_OUT_MESSAGE)
+          puts line.red
+        elsif line.start_with?(CHECK_IN_MESSAGE)
+          puts line.green
+        end
+      end
+      puts "-----".red
+    end
+  end
+
+end
+
+module Registrator 
+
+  FILE_NAME = "regdata"
+
+  def self.generate
+
+    unless File.exists?(FILE_NAME)
+      File.open(FILE_NAME, "w+") do |f|
+        f.write(Time.now.inspect + "\n")
+      end
+    end
+
+  end
+
+  def self.add_nick(nick, name, date)
+    unless self.nick_exists?(nick)
+      File.open(FILE_NAME, "a+") do |f|
+        f.write(nick + "\t" + name + "\t" + date)
+        f.write("\n")
+      end
+    end
+  end
+
+  def self.get_nick(nick)
+    if self.nick_exists?(nick)
+      File.open(FILE_NAME, "r") do |f|
+        f.each_line do |line|
+          return line.split("\t") if line.start_with?(nick)
+        end
+      end
+    end
+  end
+
+  def self.update_nick(nick, name, date)
+    puts "not implemented yet"
+  end
+
+  def self.delete_nick
+    puts "not implemented yet"
+  end
+
+  def self.nick_exists?(nick)
+    nicks = self.get_nicks
+    exists = false
+    nicks.each do |line|
+      exists = true if line.start_with?(nick + "\t")
+    end
+    exists
+  end
+
+  def self.get_nicks
+    arr = []
+
+    File.open(FILE_NAME, "r") do |f|
+      f.each_line do |line|
+        arr << line
+      end
+    end
+    arr
+  end
+
+end
+
+class User
+
+  attr_accessor :nick
+  attr_accessor :name
+  attr_accessor :date
+  attr_reader :exists
+
+
+  def initialize(nick, name = nil)
+
+
+    Registrator.add_nick(nick, name, Time.now.strftime("%H:%M:%S") ) unless name.nil?
+
+    usr = Registrator.get_nick(nick)
+
+    unless usr.nil?
+
+      @nick = usr[0]
+      @name = usr[1]
+      @date = usr[2]
+
+      @exists = true
+
+    else
+      @exists = false
+    end
+
+  end
+
+
+  def save
+    Registrator.update_nick(@nick,@name,@date)
+  end
+
+end
+
+# ACTUAL EXECUTION OF CODE
+
+Registrator.generate
+Checker.generate
+
+cmd = ARGV[0]
+
+case cmd
+  when "new"
+    nick = ARGV[1]
+    name = ARGV[2]
+
+    u = User.new(nick, name)
+    unless u.nil?
+      system("clear")
+      puts "Registro de '#{u.name}' como '#{u.nick}' completado".green
+    end
+
+  when "in"
+    nick = ARGV[1]
+
+    u = User.new(nick)
+    if u.exists
+      system("clear")
+      Checker.add_check_in(u)
+      puts "Check in de '#{u.name}' registrado a las #{u.date}".green
+    else
+      puts "No existe el usuario '#{nick}'"
+    end
+
+  when "out"
+    nick = ARGV[1]
+    u = User.new(nick)
+
+    if u.exists
+      system("clear")
+      Checker.add_check_out(u)
+      puts "Check out de '#{u.name}' registrado a las #{u.date}".green
+    else
+      puts "No existe el usuario '#{nick}'"
+    end
+
+  when "del"
+    puts "not implemented yet"
+  when "v"
+    puts "Checker version: " + VERSION
+  when "log" 
+    date = ARGV[1]
+    system("clear")
+
+    unless date.nil?
+      Checker.get_log(date)
+    else
+      Checker.get_log
+    end
+
+  else
+    puts "command not found"
+end
