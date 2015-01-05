@@ -199,7 +199,8 @@ case cmd
     if u.exists
       system("clear")
       Checker.add_check_in(u)
-      puts "Check in de '#{u.name}' registrado a las #{u.date}".green
+      time = Time.now.strftime("%H:%M:%S")
+      puts "Check in de '#{u.name}' registrado a las #{time}".green
     else
       puts "No existe el usuario '#{nick}'"
     end
@@ -211,7 +212,8 @@ case cmd
     if u.exists
       system("clear")
       Checker.add_check_out(u)
-      puts "Check out de '#{u.name}' registrado a las #{u.date}".green
+      time = Time.now.strftime("%H:%M:%S")
+      puts "Check out de '#{u.name}' registrado a las #{time}".green
     else
       puts "No existe el usuario '#{nick}'"
     end
